@@ -201,6 +201,7 @@ def run_train(data, train_data, val_data, test_data, args):
         break
 
     optimizer = torch.optim.Adam(model.parameters(), lr=args.lr)
+    loss = 0
     best_val_auc = 0
     for epoch in range(1, args.epochs):
         print("Train")
