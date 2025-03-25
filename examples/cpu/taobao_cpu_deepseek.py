@@ -1,7 +1,6 @@
 # An CPU implementation of unsupervised bipartite GraphSAGE
 # using the Alibaba Taobao dataset.
 import argparse
-import os
 import os.path as osp
 
 import torch
@@ -202,6 +201,7 @@ def run_train(data, train_data, val_data, test_data, args):
         break
 
     optimizer = torch.optim.Adam(model.parameters(), lr=args.lr)
+    loss = 0
     best_val_auc = 0
     for epoch in range(1, args.epochs):
         print("Train")
@@ -223,8 +223,8 @@ if __name__ == '__main__':
     parser.add_argument('--num_workers', type=int, default=1,
                         help="Number of workers per dataloader")
     parser.add_argument('--lr', type=float, default=0.001)
-    parser.add_argument('--epochs', type=int, default=21)
-    parser.add_argument('--batch_size', type=int, default=128)
+    parser.add_argument('--epochs', type=int, default=101)
+    parser.add_argument('--batch_size', type=int, default=2048)
     parser.add_argument(
         '--dataset_root_dir', type=str,
         default=osp.join(osp.dirname(osp.realpath(__file__)),
@@ -252,10 +252,10 @@ if __name__ == '__main__':
     data['item'].x = torch.arange(0, data['item'].num_nodes)
 
     # Only consider user<>item relationships for simplicity:
-    del data['category']
-    del data['item', 'category']
-    del data['user', 'item'].time
-    del data['user', 'item'].behavior
+    # del data['category']
+    # del data['item', 'category']
+    # del data['user', 'item'].time
+    # del data['user', 'item'].behavior
 
     # Add a reverse ('item', 'rev_to', 'user') relation for message passing:
     data = T.ToUndirected()(data)
