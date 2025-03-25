@@ -106,9 +106,9 @@ def run_train(data, train_data, val_data, test_data, args):
         edge_label_index=(('user', 'to', 'item'), train_edge_label_idx),
         neg_sampling=NegativeSampling(NegativeSamplingMode.binary),
         batch_size=args.batch_size,
-        # shuffle=True,
+        shuffle=True,
         # num_workers=args.num_workers,
-        # drop_last=True,
+        drop_last=True,
     )
     sampled_train_data = next(iter(train_loader))
     print(sampled_train_data)
@@ -122,7 +122,7 @@ def run_train(data, train_data, val_data, test_data, args):
         ),
         edge_label=val_data[('user', 'to', 'item')].edge_label,
         batch_size=args.batch_size,
-        # shuffle=False,
+        shuffle=False,
         # num_workers=args.num_workers,
     )
     sampled_val_data = next(iter(val_loader))
@@ -137,7 +137,7 @@ def run_train(data, train_data, val_data, test_data, args):
         ),
         edge_label=test_data[('user', 'to', 'item')].edge_label,
         batch_size=args.batch_size,
-        # shuffle=False,
+        shuffle=False,
         # num_workers=args.num_workers,
     )
     sampled_test_data = next(iter(test_loader))
@@ -201,7 +201,6 @@ def run_train(data, train_data, val_data, test_data, args):
         break
 
     optimizer = torch.optim.Adam(model.parameters(), lr=args.lr)
-    loss = 0
     best_val_auc = 0
     for epoch in range(1, args.epochs):
         print("Train")
@@ -220,11 +219,11 @@ def run_train(data, train_data, val_data, test_data, args):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--num_workers', type=int, default=1,
+    parser.add_argument('--num_workers', type=int, default=4,
                         help="Number of workers per dataloader")
     parser.add_argument('--lr', type=float, default=0.001)
-    parser.add_argument('--epochs', type=int, default=101)
-    parser.add_argument('--batch_size', type=int, default=2048)
+    parser.add_argument('--epochs', type=int, default=21)
+    parser.add_argument('--batch_size', type=int, default=128)
     parser.add_argument(
         '--dataset_root_dir', type=str,
         default=osp.join(osp.dirname(osp.realpath(__file__)),
@@ -252,10 +251,10 @@ if __name__ == '__main__':
     data['item'].x = torch.arange(0, data['item'].num_nodes)
 
     # Only consider user<>item relationships for simplicity:
-    # del data['category']
-    # del data['item', 'category']
-    # del data['user', 'item'].time
-    # del data['user', 'item'].behavior
+    del data['category']
+    del data['item', 'category']
+    del data['user', 'item'].time
+    del data['user', 'item'].behavior
 
     # Add a reverse ('item', 'rev_to', 'user') relation for message passing:
     data = T.ToUndirected()(data)
