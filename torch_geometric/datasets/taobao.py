@@ -107,6 +107,7 @@ class Taobao(InMemoryDataset):
         data = HeteroData()
 
         # 节点数量=实体数量
+        # 用户、商品、类目
         data['user'].num_nodes = num_entries['userId']
         data['item'].num_nodes = num_entries['itemId']
         data['category'].num_nodes = num_entries['categoryId']
