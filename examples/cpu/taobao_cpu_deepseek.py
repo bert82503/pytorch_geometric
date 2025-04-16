@@ -32,6 +32,7 @@ class ItemGNNEncoder(torch.nn.Module):
         # 边
         x = self.conv1(x, edge_index).relu()
         x = self.conv2(x, edge_index).relu()
+        # 一层线性变换
         return self.lin(x)
 
 
@@ -63,6 +64,7 @@ class UserGNNEncoder(torch.nn.Module):
             edge_index_dict[('item', 'rev_to', 'user')],
         ).relu()
 
+        # 一层线性变换
         return self.lin(user_x)
 
 
@@ -79,6 +81,7 @@ class EdgeDecoder(torch.nn.Module):
         row, col = edge_label_index
         z = torch.cat([z_src[row], z_dst[col]], dim=-1)
 
+        # 二层线性变换
         z = self.lin1(z).relu()
         z = self.lin2(z)
         return z.view(-1)
