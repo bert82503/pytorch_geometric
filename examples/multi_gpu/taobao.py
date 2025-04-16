@@ -12,6 +12,8 @@ import tqdm
 from sklearn.metrics import roc_auc_score
 from torch.nn import Embedding, Linear
 from torch.nn.parallel import DistributedDataParallel
+from torch_geometric.sampler import NegativeSampling
+from torch_geometric.sampler.base import NegativeSamplingMode
 
 import torch_geometric.transforms as T
 from torch_geometric.datasets import Taobao
@@ -111,7 +113,7 @@ def run_train(rank, data, train_data, val_data, test_data, args, world_size):
         data=train_data,
         num_neighbors=[8, 4],
         edge_label_index=(('user', 'to', 'item'), train_edge_label_idx),
-        neg_sampling='binary',
+        neg_sampling=NegativeSampling(NegativeSamplingMode.binary),
         batch_size=args.batch_size,
         shuffle=True,
         num_workers=args.num_workers,
@@ -211,6 +213,7 @@ def run_train(rank, data, train_data, val_data, test_data, args, world_size):
         break
     model = DistributedDataParallel(model, device_ids=[rank])
     optimizer = torch.optim.Adam(model.parameters(), lr=args.lr)
+    loss = 0
     best_val_auc = 0
     for epoch in range(1, args.epochs):
         print("Train")
@@ -220,8 +223,7 @@ def run_train(rank, data, train_data, val_data, test_data, args, world_size):
             val_auc = test(val_loader)
             best_val_auc = max(best_val_auc, val_auc)
         if rank == 0:
-            print(
-                f'Epoch: {epoch:02d}, Loss: {loss:4f}, Val AUC: {val_auc:.4f}')
+            print(f'Epoch: {epoch:02d}, Loss: {loss:4f}, Val AUC: {val_auc:.4f}')
     if rank == 0:
         print("Test")
         test_auc = test(test_loader)
