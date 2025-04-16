@@ -120,7 +120,6 @@ class Model(torch.nn.Module):
 def run_train(data, train_data, val_data, test_data, args):
     print("Setting up Data Loaders...")
     train_edge_label_idx = train_data[('user', 'to', 'item')].edge_label_index.clone()
-
     train_loader = LinkNeighborLoader(
         data=train_data,
         num_neighbors=[8, 4],
@@ -163,26 +162,6 @@ def run_train(data, train_data, val_data, test_data, args):
     )
     sampled_test_data = next(iter(test_loader))
     print(sampled_test_data)
-
-    # 模型
-    model = Model(
-        num_users=data['user'].num_nodes,
-        num_items=data['item'].num_nodes,
-        hidden_channels=64,
-        out_channels=64,
-    )
-    # 输出网络结构
-    print(model)
-    # Initialize lazy modules
-    for batch in train_loader:
-        _ = model(
-            batch.x_dict,
-            batch.edge_index_dict,
-            batch['user', 'item'].edge_label_index,
-        )
-        break
-
-    optimizer = torch.optim.Adam(model.parameters(), lr=args.lr)
 
     def train():
         model.train()
@@ -230,6 +209,24 @@ def run_train(data, train_data, val_data, test_data, args):
 
         return roc_auc_score(target, pred)
 
+    # 模型
+    model = Model(
+        num_users=data['user'].num_nodes,
+        num_items=data['item'].num_nodes,
+        hidden_channels=64,
+        out_channels=64,
+    )
+    # 输出网络结构
+    print(model)
+    # Initialize lazy modules
+    for batch in train_loader:
+        _ = model(
+            batch.x_dict,
+            batch.edge_index_dict,
+            batch['user', 'item'].edge_label_index,
+        )
+        break
+    optimizer = torch.optim.Adam(model.parameters(), lr=args.lr)
     loss = 0
     best_val_auc = 0
     for epoch in range(1, args.epochs):
@@ -238,8 +235,7 @@ def run_train(data, train_data, val_data, test_data, args):
         print("Val")
         val_auc = test(val_loader)
         best_val_auc = max(best_val_auc, val_auc)
-        print(
-            f'Epoch: {epoch:02d}, Loss: {loss:4f}, Val AUC: {val_auc:.4f}')
+        print(f'Epoch: {epoch:02d}, Loss: {loss:4f}, Val AUC: {val_auc:.4f}')
     print("Test")
     test_auc = test(test_loader)
     print(f'Total {args.epochs:02d} epochs: Final Loss: {loss:4f}, '
