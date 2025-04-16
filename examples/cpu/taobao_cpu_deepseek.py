@@ -276,16 +276,19 @@ if __name__ == '__main__':
     print(dataset)
     print(data)
 
+    # 用户、商品
     data['user'].x = torch.arange(0, data['user'].num_nodes)
     data['item'].x = torch.arange(0, data['item'].num_nodes)
 
     # Only consider user<>item relationships for simplicity:
+    # 为了简单起见，仅考虑用户<>商品的关系
     del data['category']
     del data['item', 'category']
     del data['user', 'item'].time
     del data['user', 'item'].behavior
 
     # Add a reverse ('item', 'rev_to', 'user') relation for message passing:
+    # 为消息传递添加反向（'item'，'rev_to'，'user'）关系：
     data = T.ToUndirected()(data)
 
     # Perform a link-level split into training, validation, and test edges:
