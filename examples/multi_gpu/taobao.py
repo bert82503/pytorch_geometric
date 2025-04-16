@@ -96,6 +96,10 @@ class Model(torch.nn.Module):
 
         return self.decoder(z_dict['user'], z_dict['item'], edge_label_index)
 
+import atexit
+def cleanup():
+    if dist.is_initialized():
+        dist.destroy_process_group()
 
 def run_train(rank, data, train_data, val_data, test_data, args, world_size):
     if rank == 0:
@@ -188,6 +192,8 @@ def run_train(rank, data, train_data, val_data, test_data, args, world_size):
     os.environ['MASTER_ADDR'] = 'localhost'
     os.environ['MASTER_PORT'] = '12355'
     dist.init_process_group('nccl', rank=rank, world_size=world_size)
+    # release all resources
+    atexit.register(cleanup)
     model = Model(
         num_users=data['user'].num_nodes,
         num_items=data['item'].num_nodes,
@@ -222,15 +228,17 @@ def run_train(rank, data, train_data, val_data, test_data, args, world_size):
         print(f'Total {args.epochs:02d} epochs: Final Loss: {loss:4f}, '
               f'Best Val AUC: {best_val_auc:.4f}, '
               f'Test AUC: {test_auc:.4f}')
+    # release all resources
+    cleanup()
 
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--num_workers', type=int, default=16,
+    parser.add_argument('--num_workers', type=int, default=4,
                         help="Number of workers per dataloader")
     parser.add_argument('--lr', type=float, default=0.001)
     parser.add_argument('--epochs', type=int, default=21)
-    parser.add_argument('--batch_size', type=int, default=2048)
+    parser.add_argument('--batch_size', type=int, default=128)
     parser.add_argument(
         '--dataset_root_dir', type=str,
         default=osp.join(osp.dirname(osp.realpath(__file__)),
