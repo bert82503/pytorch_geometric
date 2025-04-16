@@ -87,7 +87,7 @@ class EdgeDecoder(torch.nn.Module):
         return z.view(-1)
 
 
-# 淘宝模型
+# 模型
 class Model(torch.nn.Module):
     def __init__(self, num_users, num_items, hidden_channels, out_channels):
         super().__init__()
