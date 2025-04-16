@@ -8,14 +8,13 @@ import torch.nn.functional as F
 import tqdm
 from sklearn.metrics import roc_auc_score
 from torch.nn import Embedding, Linear
-from torch_geometric.sampler.base import NegativeSamplingMode
-
-from torch_geometric.sampler import NegativeSampling
 
 import torch_geometric.transforms as T
 from torch_geometric.datasets import Taobao
 from torch_geometric.loader import LinkNeighborLoader
 from torch_geometric.nn import SAGEConv
+from torch_geometric.sampler import NegativeSampling
+from torch_geometric.sampler.base import NegativeSamplingMode
 from torch_geometric.utils.convert import to_scipy_sparse_matrix
 
 
