@@ -75,7 +75,7 @@ class Taobao(InMemoryDataset):
         import pandas as pd
 
         # 读取csv文件数据
-        # 列名
+        # 用户ID，商品ID，商品类目ID，行为类型，时间戳
         cols = ['userId', 'itemId', 'categoryId', 'behaviorType', 'timestamp']
         df = pd.read_csv(self.raw_paths[0], names=cols)
 
@@ -91,6 +91,10 @@ class Taobao(InMemoryDataset):
         df = df.drop_duplicates()
 
         # 行为字典
+        # pv: 商品详情页pv，等价于点击
+        # buy: 商品购买
+        # cart: 将商品加入购物车
+        # fav: 收藏商品
         behavior_dict = {'pv': 0, 'cart': 1, 'buy': 2, 'fav': 3}
         df['behaviorType'] = df['behaviorType'].map(behavior_dict)
 
@@ -107,7 +111,7 @@ class Taobao(InMemoryDataset):
         data = HeteroData()
 
         # 节点数量=实体数量
-        # 用户、商品、类目
+        # 用户，商品，类目
         data['user'].num_nodes = num_entries['userId']
         data['item'].num_nodes = num_entries['itemId']
         data['category'].num_nodes = num_entries['categoryId']
@@ -115,7 +119,7 @@ class Taobao(InMemoryDataset):
         # <用户, 商品>边
         row = torch.from_numpy(df['userId'].values)
         col = torch.from_numpy(df['itemId'].values)
-        # 边索引
+        # 边
         data['user', 'item'].edge_index = torch.stack([row, col], dim=0)
         # 边属性
         # 操作时间戳
@@ -129,7 +133,7 @@ class Taobao(InMemoryDataset):
         # <商品, 类目>边
         row = torch.from_numpy(df['itemId'].values)
         col = torch.from_numpy(df['categoryId'].values)
-        # 边索引
+        # 边
         data['item', 'category'].edge_index = torch.stack([row, col], dim=0)
 
         # 预变换数据

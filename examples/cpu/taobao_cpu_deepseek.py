@@ -18,7 +18,7 @@ from torch_geometric.sampler.base import NegativeSamplingMode
 from torch_geometric.utils.convert import to_scipy_sparse_matrix
 
 
-# 商品编码
+# 商品节点编码
 class ItemGNNEncoder(torch.nn.Module):
     def __init__(self, hidden_channels, out_channels):
         super().__init__()
@@ -29,14 +29,14 @@ class ItemGNNEncoder(torch.nn.Module):
         self.lin = Linear(hidden_channels, out_channels)
 
     def forward(self, x, edge_index):
-        # 边
+        # 二层隐藏层
         x = self.conv1(x, edge_index).relu()
         x = self.conv2(x, edge_index).relu()
         # 一层线性变换
         return self.lin(x)
 
 
-# 用户编码
+# 用户节点编码
 class UserGNNEncoder(torch.nn.Module):
     def __init__(self, hidden_channels, out_channels):
         super().__init__()
@@ -49,16 +49,19 @@ class UserGNNEncoder(torch.nn.Module):
 
     def forward(self, x_dict, edge_index_dict):
         # 商品->商品
+        # 商品之间的关系
         item_x = self.conv1(
             x_dict['item'],
             edge_index_dict[('item', 'to', 'item')],
         ).relu()
         # 商品->用户
+        # 用户购买商品
         user_x = self.conv2(
             (x_dict['item'], x_dict['user']),
             edge_index_dict[('item', 'rev_to', 'user')],
         ).relu()
         # 中间值消息传递
+        # 用户购买商品，二次扩散
         user_x = self.conv3(
             (item_x, user_x),
             edge_index_dict[('item', 'rev_to', 'user')],
@@ -94,10 +97,10 @@ class Model(torch.nn.Module):
         # 嵌入
         self.user_emb = Embedding(num_users, hidden_channels)
         self.item_emb = Embedding(num_items, hidden_channels)
-        # 编码
+        # 节点编码
         self.item_encoder = ItemGNNEncoder(hidden_channels, out_channels)
         self.user_encoder = UserGNNEncoder(hidden_channels, out_channels)
-        # 解码
+        # 边解码
         self.decoder = EdgeDecoder(out_channels)
 
     def forward(self, x_dict, edge_index_dict, edge_label_index):
@@ -105,19 +108,20 @@ class Model(torch.nn.Module):
         # 嵌入
         x_dict['user'] = self.user_emb(x_dict['user'])
         x_dict['item'] = self.item_emb(x_dict['item'])
-        # 编码
+        # 节点编码
         z_dict['item'] = self.item_encoder(
             x_dict['item'],
             edge_index_dict[('item', 'to', 'item')],
         )
         z_dict['user'] = self.user_encoder(x_dict, edge_index_dict)
 
-        # 解码
+        # 边解码
         return self.decoder(z_dict['user'], z_dict['item'], edge_label_index)
 
 
-# 运行训练
+# 训练模型
 def run_train(data, train_data, val_data, test_data, args):
+    # 数据加载器
     print("Setting up Data Loaders...")
     train_edge_label_idx = train_data[('user', 'to', 'item')].edge_label_index.clone()
     train_loader = LinkNeighborLoader(
@@ -163,27 +167,31 @@ def run_train(data, train_data, val_data, test_data, args):
     sampled_test_data = next(iter(test_loader))
     print(sampled_test_data)
 
+    # 迭代训练：重复前向传播和反向传播，直到达到最大迭代次数或达到预设的损失值。
     def train():
+        # 训练模型
         model.train()
 
         total_loss = total_examples = 0
         for batch in tqdm.tqdm(train_loader):
+            # 梯度值，初始化为零
             optimizer.zero_grad()
-
             # torch.onnx.export(model, (batch.x_dict,
             #     batch.edge_index_dict,
             #     batch['user', 'item'].edge_label_index), "TaoBao.cpu.model.onnx")
-
+            # 前向传播：通过输入图数据，计算每一层神经网络的输出。
             pred = model(
                 batch.x_dict,
                 batch.edge_index_dict,
                 batch['user', 'item'].edge_label_index,
             )
+            # 损失函数
             loss = F.binary_cross_entropy_with_logits(
                 pred, batch['user', 'item'].edge_label)
-
+            # 反向传播：根据损失函数，计算梯度并更新模型的参数。
             loss.backward()
             optimizer.step()
+
             total_loss += float(loss)
             total_examples += pred.numel()
 
@@ -226,6 +234,7 @@ def run_train(data, train_data, val_data, test_data, args):
             batch['user', 'item'].edge_label_index,
         )
         break
+    # 优化器
     optimizer = torch.optim.Adam(model.parameters(), lr=args.lr)
     loss = 0
     best_val_auc = 0
